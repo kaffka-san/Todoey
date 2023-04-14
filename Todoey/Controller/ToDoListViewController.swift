@@ -10,13 +10,24 @@ import UIKit
 
 class ToDoListViewController: UITableViewController {
     
-    var items = [String]()
-    let defaults = UserDefaults.standard
+    var items = [Item]()
+    //let defaults = UserDefaults.standard
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist")
     override func viewDidLoad() {
         super.viewDidLoad()
-        if let itemsSafe = defaults.object(forKey: "TodoListArray") as? [String]{
-            items = itemsSafe
-        }
+        
+        
+        
+        
+        let newItem = Item(title: "Find Mike", done: false)
+        items.append(newItem)
+        let newItem2 = Item(title: "Find Mike", done: false)
+        items.append(newItem2)
+        self.loadItems()
+        
+        //   if let itemsSafe = defaults.object(forKey: "TodoListArray") as? [Item]{
+        //   items = itemsSafe
+        //}
         // Do any additional setup after loading the view.
     }
     
@@ -32,9 +43,15 @@ class ToDoListViewController: UITableViewController {
             print("success")
             if let safeTextField = textField.text {
                 if !safeTextField.isEmpty {
-                    self.items.append(safeTextField)
+                    let newItem = Item(title: safeTextField, done: false)
+                    self.items.append(newItem)
                     print("saved")
-                    self.defaults.set(self.items, forKey: "TodoListArray")
+                    self.saveItems()
+                    
+                    // trying User Deafaults. It's good only for small portion of data
+                    //self.defaults.set(self.items, forKey: "TodoListArray")
+                    
+                   
                     self.tableView.reloadData()
                 }
             }
@@ -60,6 +77,8 @@ class ToDoListViewController: UITableViewController {
         
         return items.count
     }
+    
+    
     override func tableView(_ tableView: UITableView,
                             cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         // Ask for a cell of the appropriate type.
@@ -68,8 +87,9 @@ class ToDoListViewController: UITableViewController {
         // Configure the cell’s contents with the row and section number.
         // The Basic cell style guarantees a label view is present in textLabel.
         
-        let text = items[indexPath.row]
-        cell.textLabel!.text = text
+        let item = items[indexPath.row]
+        cell.textLabel!.text = item.title
+        cell.accessoryType = item.done ? .checkmark : .none
         
         return cell
     }
@@ -78,15 +98,36 @@ class ToDoListViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         //print("\(items[indexPath.row])")
-        if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark {
-            tableView.cellForRow(at: indexPath)?.accessoryType = .none
-        }
-        else {
-            tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
-        }
+        items[indexPath.row].done = !items[indexPath.row].done
+        saveItems()
         
+        tableView.reloadData()
         tableView.deselectRow(at: indexPath, animated: true)
     }
     
+    // NS COder
+    func saveItems(){
+        let encoder = PropertyListEncoder()
+        do {
+            let data =  try encoder.encode(items)
+            try data.write(to: dataFilePath!)
+        } catch {
+            print("error encoding")
+        }
+    }
+    
+    func loadItems(){
+        if let data = try? Data(contentsOf: dataFilePath!){
+            let decoder = PropertyListDecoder()
+            do {
+                items = try decoder.decode([Item].self, from: data)
+                
+            } catch {
+                print("Error decode")
+            }
+        }
+        
+    }
 }
+
 
