@@ -44,7 +44,7 @@ class ToDoListViewController: UITableViewController  {
                     self.items.append(newItem)
                     self.saveItems()
                     self.tableView.reloadData()
-                    print("saved")
+                   
                 }
             }
         }
@@ -91,19 +91,21 @@ class ToDoListViewController: UITableViewController  {
         do {
             try context.save()
         } catch {
-            print("error saving")
+            print("error saving item \(error)")
         }
     }
-    var predicateCategorySearch : NSCompoundPredicate?
+  
     
-    func loadItems(with request : NSFetchRequest<Item>  = Item.fetchRequest()) {
+    func loadItems(with request : NSFetchRequest<Item>  = Item.fetchRequest(),  predicate: NSPredicate? = nil) {
        
-        //let predicate = NSPredicate (format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
-        if let safePredicate = predicateCategorySearch {
-            request.predicate = safePredicate
+        let categoryPredicate = NSPredicate (format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
+        
+        
+        if let addtionalPredicate = predicate {
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, addtionalPredicate])
         }
         else {
-            let predicate = NSPredicate (format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
+            request.predicate = categoryPredicate
         }
         do {
             print("trying to find")
@@ -117,23 +119,15 @@ class ToDoListViewController: UITableViewController  {
 
 extension ToDoListViewController: UISearchBarDelegate {
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-        
-        let predicateCategory = NSPredicate (format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
+ 
         let predicateSearch = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
-        
-        predicateCategorySearch = NSCompoundPredicate(type: .and, subpredicates: [predicateCategory, predicateSearch])
-        
         let request : NSFetchRequest<Item> = Item.fetchRequest()
-        request.predicate  = predicateCategorySearch
-        //request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
-        loadItems(with: request)
-       
-        
+        loadItems(with: request, predicate: predicateSearch)
     }
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         if searchBar.text?.count == 0 {
-            predicateCategorySearch = nil
+           
             loadItems()
             DispatchQueue.main.async {
                 searchBar.resignFirstResponder()
