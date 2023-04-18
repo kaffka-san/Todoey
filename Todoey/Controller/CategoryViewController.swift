@@ -8,9 +8,12 @@
 
 import UIKit
 import CoreData
+import RealmSwift
+
 class CategoryViewController: UITableViewController {
 
-    var categories = [Category]()
+    let realm = try! Realm()
+    var categories : Results<Category>?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -26,7 +29,7 @@ class CategoryViewController: UITableViewController {
     override func tableView(_ tableView: UITableView,
                             numberOfRowsInSection section: Int) -> Int {
         
-        return categories.count
+        return categories?.count ?? 1
     }
     
     override func tableView(_ tableView: UITableView,
@@ -34,9 +37,12 @@ class CategoryViewController: UITableViewController {
         // Ask for a cell of the appropriate type.
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
 
-        let category = categories[indexPath.row]
-        cell.textLabel!.text = category.name
-        
+        if let category = categories?[indexPath.row]{
+            cell.textLabel!.text = category.name
+        }
+        else{
+            cell.textLabel!.text = "No Category was added yet"
+        }
         return cell
     }
     // MARK: - Select Row
@@ -56,7 +62,7 @@ class CategoryViewController: UITableViewController {
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         let destinationVC = segue.destination as! ToDoListViewController
         if let indexPath = tableView.indexPathForSelectedRow{
-            destinationVC.selectedCategory = categories[indexPath.row]
+            destinationVC.selectedCategory = categories?[indexPath.row]
         }
     }
     
@@ -71,10 +77,9 @@ class CategoryViewController: UITableViewController {
             if let safeTextField = textField.text {
                 if !safeTextField.isEmpty {
                     
-                    let newCategory = Category(context: context)
+                    let newCategory = Category()
                     newCategory.name = safeTextField
-                    self.categories.append(newCategory)
-                    self.saveCategories()
+                    self.saveCategories(object: newCategory)
                     self.tableView.reloadData()
                     print("saved new category")
                 }
@@ -91,22 +96,19 @@ class CategoryViewController: UITableViewController {
     
     //MARK: - Data manipulation
     
-    func loadCategories(with request : NSFetchRequest<Category>  = Item.fetchRequest()) {
+    func loadCategories() {
       
-        do {
-            print("trying to find")
-            categories = try context.fetch(request)
-        } catch {
-            print("Error writting Data")
-        }
+        categories = realm.objects(Category.self)
         tableView.reloadData()
     }
     
-    func saveCategories(){
-        do {
-            try context.save()
-        } catch {
-            print("error saving category")
+    func saveCategories(object: Category){
+        do{
+            try realm.write{
+                realm.add(object)
+            }
+        }catch{
+            print("error save category")
         }
     }
    

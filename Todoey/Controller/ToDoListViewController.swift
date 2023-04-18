@@ -8,10 +8,13 @@
 
 import UIKit
 import CoreData
-let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+import RealmSwift
+
 class ToDoListViewController: UITableViewController  {
     
-    var items = [Item]()
+    let realm = try! Realm()
+    var items : Results<Item>?
+    @IBOutlet weak var searchBar: UISearchBar!
     var selectedCategory : Category?{
         didSet{
             self.loadItems()
@@ -19,10 +22,9 @@ class ToDoListViewController: UITableViewController  {
     }
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
-       
-             
+  
     }
 
     //MARK: - Add new Items
@@ -36,14 +38,20 @@ class ToDoListViewController: UITableViewController  {
             print("success")
             if let safeTextField = textField.text {
                 if !safeTextField.isEmpty {
-                    
-                    let newItem = Item(context: context)
-                    newItem.title = safeTextField
-                    newItem.done = false
-                    newItem.parentCategory = self.selectedCategory
-                    self.items.append(newItem)
-                    self.saveItems()
-                    self.tableView.reloadData()
+                    if let currentCategory = self.selectedCategory {
+                        do{
+                            try self.realm.write{
+                                let newItem = Item()
+                                newItem.title = safeTextField
+                                newItem.done = false
+                                currentCategory.items.append(newItem)
+                                self.realm.add(newItem)
+                            }
+                        } catch{
+                            print("error adding new item \(error)")
+                        }
+                    }
+                self.tableView.reloadData()
                    
                 }
             }
@@ -56,83 +64,62 @@ class ToDoListViewController: UITableViewController  {
         alert.addAction(action)
         present(alert, animated: true, completion: nil)
     }
-    
-    
+  
     //MARK: - Table data insert
-    
     override func tableView(_ tableView: UITableView,
                             numberOfRowsInSection section: Int) -> Int {
-        
-        return items.count
+        return items?.count ?? 1
     }
     
     override func tableView(_ tableView: UITableView,
                             cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        // Ask for a cell of the appropriate type.
         let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
-        
-        // Configure the cell’s contents with the row and section number.
-        // The Basic cell style guarantees a label view is present in textLabel.
-        
-        let item = items[indexPath.row]
-        cell.textLabel!.text = item.title
-        cell.accessoryType = item.done ? .checkmark : .none
-        
+      
+        if let item = items?[indexPath.row]{
+            cell.textLabel!.text = item.title
+            cell.accessoryType = item.done ? .checkmark : .none
+        }
+        else{
+            cell.textLabel!.text = "No Item was added yet"
+        }
+      
         return cell
     }
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        items[indexPath.row].done = !items[indexPath.row].done
-        saveItems()
+        if let item = items?[indexPath.row]{
+            do{
+                try realm.write{
+                    item.done = !item.done
+                }
+            } catch {
+                print("Error changing done status, \(error)")
+            }
+        }
         tableView.reloadData()
-        tableView.deselectRow(at: indexPath, animated: true)
     }
-
-    func saveItems(){
-        do {
-            try context.save()
-        } catch {
-            print("error saving item \(error)")
-        }
-    }
-  
-    
-    func loadItems(with request : NSFetchRequest<Item>  = Item.fetchRequest(),  predicate: NSPredicate? = nil) {
-       
-        let categoryPredicate = NSPredicate (format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
-        
-        
-        if let addtionalPredicate = predicate {
-            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, addtionalPredicate])
-        }
-        else {
-            request.predicate = categoryPredicate
-        }
-        do {
-            print("trying to find")
-            items = try context.fetch(request)
-        } catch {
-            print("Error writting Data")
-        }
+   func loadItems() {
+        items = selectedCategory?.items.sorted(byKeyPath: "title")
         tableView.reloadData()
     }
 }
-
-extension ToDoListViewController: UISearchBarDelegate {
+extension ToDoListViewController: UISearchBarDelegate{
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
- 
-        let predicateSearch = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
-        let request : NSFetchRequest<Item> = Item.fetchRequest()
-        loadItems(with: request, predicate: predicateSearch)
+     
+        items = items?.filter( "title CONTAINS[cd] %@", searchBar.text!)
+            .sorted(byKeyPath: "title", ascending: true)
+        tableView.reloadData()
     }
-    
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         if searchBar.text?.count == 0 {
-           
+            
             loadItems()
             DispatchQueue.main.async {
                 searchBar.resignFirstResponder()
             }
-           
+            
         }
     }
 }
+
+
+
