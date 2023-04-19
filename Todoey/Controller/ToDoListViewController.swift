@@ -44,6 +44,7 @@ class ToDoListViewController: UITableViewController  {
                                 let newItem = Item()
                                 newItem.title = safeTextField
                                 newItem.done = false
+                                newItem.date = Date()
                                 currentCategory.items.append(newItem)
                                 self.realm.add(newItem)
                             }
@@ -106,7 +107,7 @@ extension ToDoListViewController: UISearchBarDelegate{
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
      
         items = items?.filter( "title CONTAINS[cd] %@", searchBar.text!)
-            .sorted(byKeyPath: "title", ascending: true)
+            .sorted(byKeyPath: "date", ascending: false)
         tableView.reloadData()
     }
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
