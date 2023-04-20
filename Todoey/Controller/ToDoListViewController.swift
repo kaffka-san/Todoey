@@ -9,11 +9,12 @@
 import UIKit
 import CoreData
 import RealmSwift
-
-class ToDoListViewController: UITableViewController  {
+import ChameleonFramework
+class ToDoListViewController: SwipeTableViewController  {
     
     let realm = try! Realm()
     var items : Results<Item>?
+    @IBOutlet weak var addButton: UIBarButtonItem!
     @IBOutlet weak var searchBar: UISearchBar!
     var selectedCategory : Category?{
         didSet{
@@ -22,13 +23,32 @@ class ToDoListViewController: UITableViewController  {
     }
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        tableView.rowHeight = 80
+        
+        
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
-  
+        
     }
-
-    //MARK: - Add new Items
     
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        if let safeTitle = selectedCategory?.name{
+            title = safeTitle
+        }
+        if let stringColor = selectedCategory?.color {
+            if let color = UIColor(hexString: stringColor){
+                
+                navigationController?.navigationBar.scrollEdgeAppearance?.backgroundColor = color
+                searchBar.barTintColor = color
+                navigationController?.navigationBar.tintColor = ContrastColorOf(color, returnFlat: true)
+                navigationController?.navigationBar.scrollEdgeAppearance?.titleTextAttributes = [NSAttributedString.Key.foregroundColor : ContrastColorOf(color, returnFlat: true) ]
+                addButton.tintColor = ContrastColorOf(color, returnFlat: true)
+                print("sasas")
+            }
+        }
+    }
+    //MARK: - Add new Items
     @IBAction func plusButtonPressed(_ sender: UIBarButtonItem) {
         var textField = UITextField()
         let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
@@ -52,8 +72,8 @@ class ToDoListViewController: UITableViewController  {
                             print("error adding new item \(error)")
                         }
                     }
-                self.tableView.reloadData()
-                   
+                    self.tableView.reloadData()
+                    
                 }
             }
         }
@@ -65,7 +85,7 @@ class ToDoListViewController: UITableViewController  {
         alert.addAction(action)
         present(alert, animated: true, completion: nil)
     }
-  
+    
     //MARK: - Table data insert
     override func tableView(_ tableView: UITableView,
                             numberOfRowsInSection section: Int) -> Int {
@@ -74,16 +94,26 @@ class ToDoListViewController: UITableViewController  {
     
     override func tableView(_ tableView: UITableView,
                             cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
-      
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        
         if let item = items?[indexPath.row]{
             cell.textLabel!.text = item.title
+            if let categoryColorString = selectedCategory?.color {
+                if let color = UIColor(hexString: categoryColorString){
+                    cell.backgroundColor = color.darken(byPercentage: CGFloat(indexPath.row ) / CGFloat(items!.count ))
+                    cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+                }
+                
+                
+            }
+            
+            
             cell.accessoryType = item.done ? .checkmark : .none
         }
         else{
             cell.textLabel!.text = "No Item was added yet"
         }
-      
+        
         return cell
     }
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -98,14 +128,28 @@ class ToDoListViewController: UITableViewController  {
         }
         tableView.reloadData()
     }
-   func loadItems() {
-        items = selectedCategory?.items.sorted(byKeyPath: "title")
+    func loadItems() {
+        items = selectedCategory?.items.sorted(byKeyPath: "title").sorted(byKeyPath: "date", ascending: true)
         tableView.reloadData()
     }
+    override func updateModel(at indexPath: IndexPath) {
+        do{
+            try self.realm.write{
+                if let itemsSafe = self.items {
+                    self.realm.delete(itemsSafe[indexPath.row])
+                }
+            }
+        }catch{
+            print("error deleting")
+        }
+    }
+    
 }
+
+//MARK: - Search methods
 extension ToDoListViewController: UISearchBarDelegate{
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-     
+        
         items = items?.filter( "title CONTAINS[cd] %@", searchBar.text!)
             .sorted(byKeyPath: "date", ascending: false)
         tableView.reloadData()
@@ -120,6 +164,8 @@ extension ToDoListViewController: UISearchBarDelegate{
             
         }
     }
+    
+    
 }
 
 
