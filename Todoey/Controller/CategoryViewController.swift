@@ -47,7 +47,8 @@ class CategoryViewController: SwipeTableViewController {
             cell.textLabel!.text = category.name
             if let colorCategory = UIColor(hexString: category.color){
                 cell.backgroundColor = colorCategory
-                cell.textLabel?.textColor = ContrastColorOf(colorCategory, returnFlat: true)
+                cell.textLabel?.textColor = .white
+                cell.textLabel?.font = UIFont.init(name: "Helvetica-bold", size: 18)
             }
             
         }

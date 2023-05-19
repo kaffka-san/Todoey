@@ -24,6 +24,8 @@ class ToDoListViewController: SwipeTableViewController  {
     override func viewDidLoad() {
         super.viewDidLoad()
         tableView.rowHeight = 80
+        searchBar.tintColor = .white
+        searchBar.searchTextField.leftView?.tintColor = .white
         
         
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
@@ -48,6 +50,10 @@ class ToDoListViewController: SwipeTableViewController  {
             }
         }
     }
+    
+    
+    
+    
     //MARK: - Add new Items
     @IBAction func plusButtonPressed(_ sender: UIBarButtonItem) {
         var textField = UITextField()
@@ -77,6 +83,23 @@ class ToDoListViewController: SwipeTableViewController  {
                 }
             }
         }
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         alert.addTextField{
             alertTextField in
             alertTextField.placeholder = "Create new Item"
@@ -101,7 +124,10 @@ class ToDoListViewController: SwipeTableViewController  {
             if let categoryColorString = selectedCategory?.color {
                 if let color = UIColor(hexString: categoryColorString){
                     cell.backgroundColor = color.darken(byPercentage: CGFloat(indexPath.row ) / CGFloat(items!.count ))
-                    cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+                    //cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+                    cell.textLabel?.textColor = .white
+                    cell.textLabel?.font = UIFont.init(name: "Helvetica-bold", size: 18)
+                    
                 }
                 
                 
